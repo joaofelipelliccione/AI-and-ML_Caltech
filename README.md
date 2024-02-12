@@ -1,2 +1,2 @@
-# AI-and-ML_Caltech
-Repositório para armazenamento dos exercícios da Pós-Graduação em AI e ML, realizada na Caltech.
+# Caltech's Post Graduate Program in Artificial Intelligence and Machine Learning
+Repository for storing the exercises of the course.
