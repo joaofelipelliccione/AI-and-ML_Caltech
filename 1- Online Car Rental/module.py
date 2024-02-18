@@ -1,17 +1,16 @@
 from typing import Literal
 from datetime import datetime
 
+"""Types"""
 CarModel = Literal["Toyota Corolla", "Ford F-150", "Volkswagen Golf", "Honda Civic"]
 RentalMode = Literal["Hourly", "Daily", "Weekly"]
 
 Stock = dict[CarModel, int]
 # {"Toyota Corolla": 5, "Ford F-150": 10, "Volkswagen Golf": 15, "Honda Civic": 20}
-
-RentInfo = list[tuple[int, CarModel, int, RentalMode]]
+RentalDetails = list[tuple[int, CarModel, int, RentalMode]]
 # [(Units to Rent, Ford F-150, Amount of RentalMode, "Hourly",)]
-
-History = list[tuple[int, CarModel, int, RentalMode, str, str]]
-# [(Units to Rent, Ford F-150, Amount of RentalMode, "Hourly", Rental Start Date, Rental End Date)]
+Control = dict[CarModel, list[tuple[int, int, RentalMode, str, str]]]
+# {"Toyota Corolla": [(Units to Rent, Amount of RentalMode, "Hourly", Rental Start Date, Rental End Date)],
 
 
 class CarRental:
@@ -23,24 +22,27 @@ class CarRental:
             "Volkswagen Golf": 15,
             "Honda Civic": 20,
         }
-        self.history: History = []
+        self.history: Control = {model: [] for model in self.stock}
 
-    def _register_rent(self, rent_info: RentInfo) -> History:
-        rental_summary: History = []
+    def _add_to_history(self, rental_summary: Control) -> None:
+        for car_model, rental_summary_list in rental_summary.items():
+            self.history[car_model].extend(rental_summary_list)
 
-        for units, car_model, rental_mode_amount, rental_mode in rent_info:
+    def _create_rent(self, rental_details: RentalDetails) -> Control:
+        rental_summary: Control = {model: [] for model in self.stock}
+
+        for units, car_model, rental_mode_amount, rental_mode in rental_details:
             if units <= self.stock[car_model]:
                 self.stock[car_model] -= units
-
                 current_time = datetime.now()
-                rental_summary.append(
+
+                rental_summary[car_model].append(
                     (
                         units,
-                        car_model,
                         rental_mode_amount,
                         rental_mode,
                         str(current_time),
-                        "FINAL_DATE",
+                        "END_DATE",
                     )
                 )
             else:
@@ -48,7 +50,7 @@ class CarRental:
                     f"[Error] [{car_model}] --> Required units: {units} | Available units: {self.stock[car_model]}"
                 )
 
-        self.history.extend(rental_summary)
+        self._add_to_history(rental_summary)
         return rental_summary
 
     def show_available_cars(self, car_model: CarModel = None) -> None:
@@ -59,17 +61,15 @@ class CarRental:
         else:
             print(f"Available {car_model} units: {self.stock[car_model]}.")
 
-    def hourly_rent(self, rent_info: RentInfo) -> None:
-        rental_summary: History = self._register_rent(rent_info)
+    def hourly_rent(self, rental_details: RentalDetails) -> None:
+        rental_summary: Control = self._create_rent(rental_details)
         print(f"Rental summary: {rental_summary}")
 
 
 rental = CarRental("John Doe")
 rental.hourly_rent(
-    [
-        (2, "Toyota Corolla", 12, "Hourly"),
-        (100, "Ford F-150", 5, "Hourly"),
-    ]
+    [(2, "Toyota Corolla", 12, "Hourly"), (1, "Toyota Corolla", 5, "Hourly")]
 )
+rental.hourly_rent([(1, "Ford F-150", 10, "Hourly")])
 print(rental.history)
 rental.show_available_cars()
