@@ -1,75 +1,66 @@
-from typing import Literal
 from datetime import datetime
-
-"""Types"""
-CarModel = Literal["Toyota Corolla", "Ford F-150", "Volkswagen Golf", "Honda Civic"]
-RentalMode = Literal["Hourly", "Daily", "Weekly"]
-
-Stock = dict[CarModel, int]
-# {"Toyota Corolla": 5, "Ford F-150": 10, "Volkswagen Golf": 15, "Honda Civic": 20}
-RentalDetails = list[tuple[int, CarModel, int, RentalMode]]
-# [(Units to Rent, Ford F-150, Amount of RentalMode, "Hourly",)]
-Control = dict[CarModel, list[tuple[int, int, RentalMode, str, str]]]
-# {"Toyota Corolla": [(Units to Rent, Amount of RentalMode, "Hourly", Rental Start Date, Rental End Date)],
 
 
 class CarRental:
-    def __init__(self, customer_name: str):
-        self.customer_name = customer_name
-        self.stock: Stock = {
-            "Toyota Corolla": 5,
-            "Ford F-150": 10,
-            "Volkswagen Golf": 15,
-            "Honda Civic": 20,
-        }
-        self.history: Control = {model: [] for model in self.stock}
+    def __init__(self, inventory):
+        self.inventory = inventory
+        self.rented_cars = {}
 
-    def _add_to_history(self, rental_summary: Control) -> None:
-        for car_model, rental_summary_list in rental_summary.items():
-            self.history[car_model].extend(rental_summary_list)
+    def display_available_cars(self):
+        print("Available Cars:")
+        for car, quantity in self.inventory.items():
+            print(f"{car}: {quantity}")
 
-    def _create_rent(self, rental_details: RentalDetails) -> Control:
-        rental_summary: Control = {model: [] for model in self.stock}
+    def rent(self, car, num_cars, rental_type):
+        if car in self.rented_cars:
+            return f"You already have a rental record for {car}. Try returning it or renting a different model."
 
-        for units, car_model, rental_mode_amount, rental_mode in rental_details:
-            if units <= self.stock[car_model]:
-                self.stock[car_model] -= units
-                current_time = datetime.now()
+        if car in self.inventory and self.inventory[car] >= num_cars and num_cars > 0:
+            self.rented_cars[car] = {
+                "rental_type": rental_type,
+                "start_time": datetime.now(),
+                "num_cars": num_cars,
+            }
+            self.inventory[car] -= num_cars
+            return f"Rented Car(s): {num_cars} {car}(s) | Rental Type: {rental_type}"
 
-                rental_summary[car_model].append(
-                    (
-                        units,
-                        rental_mode_amount,
-                        rental_mode,
-                        str(current_time),
-                        "END_DATE",
-                    )
-                )
-            else:
-                print(
-                    f"[Error] [{car_model}] --> Required units: {units} | Available units: {self.stock[car_model]}"
-                )
+        return "Invalid rental request. Please check availability and/or the number of cars requested."
 
-        self._add_to_history(rental_summary)
-        return rental_summary
+    def return_cars(self, car):
+        if car in self.rented_cars:
+            return self._process_return(car)
+        return "Invalid return request. Car not found in rented cars."
 
-    def show_available_cars(self, car_model: CarModel = None) -> None:
-        if car_model is None:
-            print("Available cars:")
-            for car_model, quantity in self.stock.items():
-                print(f"{car_model}: {quantity} units available")
-        else:
-            print(f"Available {car_model} units: {self.stock[car_model]}.")
+    def _calculate_rental_period(self, rental_period, rental_type):
+        if rental_type == "hourly":
+            return f"{rental_period.seconds // 3600} hours."
+        elif rental_type == "daily":
+            return f"{rental_period.days} days."
+        elif rental_type == "weekly":
+            return f"{rental_period.days // 7} weeks."
 
-    def hourly_rent(self, rental_details: RentalDetails) -> None:
-        rental_summary: Control = self._create_rent(rental_details)
-        print(f"Rental summary: {rental_summary}")
+    def _process_return(self, car):
+        rental_info = self.rented_cars.pop(car)
+        start_time = rental_info["start_time"]
+        num_cars = rental_info["num_cars"]
+        rental_type = rental_info["rental_type"]
+
+        rental_period = datetime.now() - start_time
+        print(f"RENTAL_PERIOD_DEBUG: {str(rental_period)}")  # TO DEBUG
+        specific_rental_period = self._calculate_rental_period(
+            rental_period, rental_type
+        )
+
+        self.inventory[car] += num_cars
+        return f"{num_cars} {car}(s) returned | Rental period: {specific_rental_period}"
 
 
-rental = CarRental("John Doe")
-rental.hourly_rent(
-    [(2, "Toyota Corolla", 12, "Hourly"), (1, "Toyota Corolla", 5, "Hourly")]
-)
-rental.hourly_rent([(1, "Ford F-150", 10, "Hourly")])
-print(rental.history)
-rental.show_available_cars()
+class Customer:
+    def __init__(self, name):
+        self.name = name
+
+    def rent_car(self, rental, car, num_cars, rental_type):
+        return rental.rent(car, num_cars, rental_type)
+
+    def return_car(self, rental, car):
+        return rental.return_cars(car)
